@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pinpoint Challenge — Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:#0a0a0a;color:#fff;font-family:'Barlow',sans-serif;display:flex;flex-direction:column;}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:10px 28px;border-bottom:1px solid #1a1a1a;flex-shrink:0;}
+.nav-logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;letter-spacing:1px;}
+.nav-logo span{color:#e63946;}
+.nav-center{text-align:center;}
+.nav-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;letter-spacing:2px;}
+.nav-meta{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#333;margin-top:1px;}
+.nav-right{display:flex;gap:8px;align-items:center;}
+.badge{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:1.5px;padding:4px 11px;border:1px solid #2a2a2a;border-radius:3px;color:#444;}
+
+/* Waiting */
+#waiting{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.wait-logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:56px;letter-spacing:5px;color:#161616;}
+.wait-logo span{color:#1e0608;}
+.wait-sub{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#1e1e1e;}
+
+/* Main two-column layout */
+#gameArea{flex:1;display:none;grid-template-columns:1fr 1fr;overflow:hidden;}
+
+.col{display:flex;flex-direction:column;overflow:hidden;}
+.col-left{border-right:1px solid #1a1a1a;}
+
+.col-hdr{padding:12px 24px 10px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.col-hdr-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;letter-spacing:1px;}
+.safe-title{color:#22c55e;}.out-title{color:#e63946;}
+.col-hdr-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#222;}
+
+.entries{flex:1;overflow-y:auto;}
+
+/* Entry row */
+.entry{display:flex;align-items:center;gap:12px;padding:9px 24px;border-bottom:1px solid #0f0f0f;transition:background 0.3s;}
+.entry.entering{animation:slideIn 0.4s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:translateX(0);}}
+
+.entry-pos{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;color:#1e1e1e;min-width:26px;text-align:right;flex-shrink:0;}
+.safe-col .entry-pos{color:#22c55e22;}.out-col .entry-pos{color:#e6394622;}
+
+.entry-logo{width:34px;height:34px;object-fit:contain;flex-shrink:0;}
+
+.entry-body{flex:1;min-width:0;}
+.entry-team{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;letter-spacing:1px;white-space:nowrap;}
+.safe-col .entry-team{color:#fff;}.out-col .entry-team{color:#888;}
+.entry-player{font-size:11px;color:#444;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.safe-col .entry-player{color:#22c55e66;}.out-col .entry-player{color:#3a1a1a;}
+
+.entry-rank{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:32px;flex-shrink:0;text-align:right;min-width:54px;}
+.safe-col .entry-rank{color:#22c55e;}.out-col .entry-rank{color:#e6394655;}
+
+/* Rank splash */
+#rankSplash{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:none;opacity:0;}
+#rankSplash.show{animation:splashIn 0.18s ease forwards;}
+#rankSplash.fly{animation:splashFly 0.55s cubic-bezier(0.4,0,0.2,1) forwards;}
+.splash-bg{position:absolute;inset:0;background:rgba(0,0,0,0.88);}
+.splash-player{position:relative;font-size:22px;letter-spacing:1px;color:rgba(255,255,255,0.45);font-family:'Barlow',sans-serif;text-align:center;}
+.splash-num{position:relative;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(160px,28vw,280px);letter-spacing:-4px;line-height:1;color:#fff;text-shadow:0 0 80px rgba(255,255,255,0.12);}
+.splash-num.green{color:#22c55e;text-shadow:0 0 100px rgba(34,197,94,0.5);}
+.splash-num.red{color:#e63946;text-shadow:0 0 100px rgba(230,57,70,0.5);}
+.splash-sub{position:relative;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;letter-spacing:3px;color:#e63946;text-transform:uppercase;text-align:center;}
+@keyframes splashIn{from{opacity:0;transform:scale(0.6);}to{opacity:1;transform:scale(1);}}
+@keyframes splashFly{from{opacity:1;transform:scale(1);}to{opacity:0;transform:scale(0.08) translateY(300px);}}
+.entry.pending .entry-team{color:#1e1e1e;}
+.entry.pending .entry-rank{color:#141414;font-size:20px;}
+
+/* Current guesser bar */
+.cur-bar{flex-shrink:0;background:#111;border-top:2px solid #1e1e1e;padding:9px 24px;display:flex;align-items:center;gap:12px;}
+.cb-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#2a2a2a;}
+.cb-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;}
+.cb-pulse{width:7px;height:7px;border-radius:50%;background:#e63946;margin-left:auto;animation:pulse 0.8s ease-in-out infinite alternate;}
+@keyframes pulse{from{opacity:0.3;}to{opacity:1;}}
+.cb-done{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:2px;color:#22c55e;margin-left:auto;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">PINPOINT <span>CHALLENGE</span></div>
+  <div class="nav-center">
+    <div class="nav-title" id="navTitle">—</div>
+    <div class="nav-meta" id="navMeta"></div>
+  </div>
+  <div class="nav-right">
+    <div class="badge" id="guessBadge">—</div>
+  </div>
+</nav>
+
+<div id="waiting">
+  <div class="wait-logo">PINPOINT <span>CHALLENGE</span></div>
+  <div class="wait-sub">Waiting for host…</div>
+</div>
+
+<div id="gameArea">
+  <div class="col col-left safe-col">
+    <div class="col-hdr">
+      <span class="col-hdr-title safe-title">✓ Safe</span>
+      <span class="col-hdr-sub">Top 15 · Closest to #100</span>
+    </div>
+    <div class="entries" id="safeList"></div>
+  </div>
+  <div class="col out-col">
+    <div class="col-hdr">
+      <span class="col-hdr-title out-title">✗ Out</span>
+      <span class="col-hdr-sub">Bottom 15 · Furthest from #100</span>
+    </div>
+    <div class="entries" id="outList"></div>
+  </div>
+</div>
+
+<div class="cur-bar" id="curBar" style="display:none">
+  <span class="cb-label">Now Guessing</span>
+  <div id="cbLogoWrap"></div>
+  <span class="cb-name" id="cbName">—</span>
+  <div class="cb-pulse" id="cbPulse"></div>
+  <span class="cb-done" id="cbDone" style="display:none">✓ All Teams Guessed</span>
+</div>
+
+<div id="rankSplash">
+  <div class="splash-bg"></div>
+  <div class="splash-player" id="splashPlayer"></div>
+  <div class="splash-num" id="splashNum"></div>
+  <div class="splash-sub" id="splashSub"></div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const topic = new URLSearchParams(location.search).get('topic') || '';
+
+let lastGuessCount = 0;
+let lastTs = 0;
+let splashBusy = false;
+let isInitialLoad = true; // skip splash on first state received (reconnect/page load)
+let pendingSplash = null; // queued state to render after splash finishes
+
+function logoHtml(teamId, color, alt, abbr, size){
+  return `<img src="${logoUrl(teamId)}" width="${size}" height="${size}" style="object-fit:contain;flex-shrink:0"
+    onerror="this.outerHTML='<div style=\\'width:${size}px;height:${size}px;border-radius:50%;background:${color};color:${alt};display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:${Math.max(7,size/3.2)|0}px;\\'>${abbr}</div>'" />`;
+}
+
+function showRankSplash(rank, playerName, onDone){
+  const el = document.getElementById('rankSplash');
+  const numEl = document.getElementById('splashNum');
+  const playerEl = document.getElementById('splashPlayer');
+  const subEl = document.getElementById('splashSub');
+  if(rank === 999){
+    numEl.textContent = 'NOT FOUND';
+    subEl.textContent = '';
+  } else if(rank > 100){
+    numEl.textContent = '#' + rank;
+    subEl.textContent = (rank - 100) + ' OVER THE LINE';
+  } else {
+    numEl.textContent = '#' + rank;
+    subEl.textContent = '';
+  }
+  numEl.className = 'splash-num ' + (rank === 999 ? 'red' : rank > 100 ? 'red' : rank >= 51 ? 'green' : 'red');
+  playerEl.textContent = playerName;
+  el.style.animation = 'none'; el.style.opacity = '0';
+  void el.offsetWidth;
+  el.style.animation = ''; el.style.opacity = '';
+  el.className = 'show';
+  setTimeout(()=>{
+    el.className = 'fly';
+    setTimeout(()=>{
+      el.className = ''; el.style.opacity = '0';
+      splashBusy = false;
+      if(onDone) onDone();
+    }, 600);
+  }, 1600);
+}
+
+function render(state){
+  if(!state) return;
+
+  document.getElementById('waiting').style.display = 'none';
+  document.getElementById('gameArea').style.display = 'grid';
+  document.getElementById('curBar').style.display = 'flex';
+
+  document.getElementById('navTitle').textContent = state.title || '';
+  document.getElementById('navMeta').textContent = state.meta || '';
+  document.getElementById('guessBadge').textContent = `${state.guessCount||0} / ${state.totalTeams||30} guessed`;
+
+  const standings = state.standings || [];
+  const safe = standings.filter(s=>s.safe);
+  const out = standings.filter(s=>!s.safe);
+  const guessedIds = new Set(standings.map(s=>s.teamId));
+  const pending = TEAMS.filter(t=>!guessedIds.has(t.id));
+
+  document.getElementById('safeList').innerHTML = safe.map(s=>`
+    <div class="entry">
+      <span class="entry-pos">${s.pos}</span>
+      ${logoHtml(s.teamId,s.teamColor,s.teamAlt,s.teamAbbr,34)}
+      <div class="entry-body">
+        <div class="entry-team">${s.teamAbbr}</div>
+        <div class="entry-player">${s.player||'—'} · ${s.value||''}</div>
+      </div>
+      <span class="entry-rank" style="${s.rank>100&&s.rank<999?'opacity:0.4':''}">${s.rank===999?'N/F':('#'+s.rank)}</span>
+    </div>`).join('');
+
+  document.getElementById('outList').innerHTML = out.map(s=>`
+    <div class="entry">
+      <span class="entry-pos">${s.pos}</span>
+      ${logoHtml(s.teamId,s.teamColor,s.teamAlt,s.teamAbbr,34)}
+      <div class="entry-body">
+        <div class="entry-team">${s.teamAbbr}</div>
+        <div class="entry-player">${s.player||'—'} · ${s.value||''}</div>
+      </div>
+      <span class="entry-rank" style="${s.rank>100&&s.rank<999?'opacity:0.4':''}">${s.rank===999?'N/F':('#'+s.rank)}</span>
+    </div>`).join('') +
+    pending.slice(0, Math.max(0, 15 - out.length)).map(t=>`
+    <div class="entry pending">
+      <span class="entry-pos">—</span>
+      ${logoHtml(t.id,t.color,t.alt,t.abbr,34)}
+      <div class="entry-body">
+        <div class="entry-team">${t.abbr}</div>
+        <div class="entry-player">waiting…</div>
+      </div>
+      <span class="entry-rank">#—</span>
+    </div>`).join('');
+
+  if(state.currentTeamId){
+    const ct = TEAMS.find(t=>t.id===state.currentTeamId);
+    if(ct){
+      document.getElementById('cbLogoWrap').innerHTML = logoHtml(ct.id,ct.color,ct.alt,ct.abbr,26);
+      document.getElementById('cbName').textContent = ct.name;
+      document.getElementById('cbPulse').style.display = 'block';
+      document.getElementById('cbDone').style.display = 'none';
+    }
+  } else if(state.guessCount >= state.totalTeams){
+    document.getElementById('cbLogoWrap').innerHTML = '';
+    document.getElementById('cbName').textContent = '';
+    document.getElementById('cbPulse').style.display = 'none';
+    document.getElementById('cbDone').style.display = 'block';
+  }
+}
+
+function handleState(state){
+  if(!state) return;
+
+  // Handle reset
+  if(state.status === 'reset'){
+    document.getElementById('waiting').style.display = 'flex';
+    document.getElementById('gameArea').style.display = 'none';
+    document.getElementById('curBar').style.display = 'none';
+    document.getElementById('navTitle').textContent = '—';
+    document.getElementById('navMeta').textContent = '';
+    document.getElementById('guessBadge').textContent = '—';
+    lastGuessCount = 0; lastTs = 0; isInitialLoad = true;
+    return;
+  }
+
+  const ts = state.ts || 0;
+  if(ts !== 0 && ts === lastTs) return;
+  lastTs = ts;
+
+  const newGuessCount = state.guessCount || 0;
+  const isNewGuess = !isInitialLoad && newGuessCount > lastGuessCount;
+  lastGuessCount = newGuessCount;
+
+  if(isInitialLoad){
+    isInitialLoad = false;
+    render(state);
+    return;
+  }
+
+  if(isNewGuess && state.standings && state.standings.length > 0){
+    // Find the most recently guessed entry
+    const latestEntry = state.standings.reduce((best, s) =>
+      (s.guessOrder !== undefined && s.guessOrder > (best ? best.guessOrder : -1) ? s : best), null);
+
+    if(latestEntry){
+      if(splashBusy){
+        // Queue this state — show after current splash
+        pendingSplash = state;
+        return;
+      }
+      splashBusy = true;
+      showRankSplash(latestEntry.rank, latestEntry.player || '', ()=>{
+        render(state);
+        if(pendingSplash){
+          const next = pendingSplash;
+          pendingSplash = null;
+          handleState(next);
+        }
+      });
+      return;
+    }
+  }
+
+  render(state);
+}
+
+// ── ntfy.sh connection ─────────────────────────────────────────────────────────
+if(!topic){
+  document.querySelector('.wait-sub').textContent = 'No topic set — add ?topic=your-topic to the URL';
+} else {
+  // Poll for last 10 minutes on load (handles OBS reconnects)
+  fetch('https://ntfy.sh/' + topic + '/json?poll=1&since=10m')
+    .then(r => r.text())
+    .then(text => {
+      const lines = text.trim().split('\n').filter(Boolean);
+      if(!lines.length) return;
+      try {
+        const msg = JSON.parse(lines[lines.length - 1]);
+        if(msg.message) handleState(JSON.parse(msg.message));
+      } catch{}
+    })
+    .catch(()=>{});
+
+  // Live updates via SSE
+  const es = new EventSource('https://ntfy.sh/' + topic + '/sse');
+  es.addEventListener('message', e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if(msg.message) handleState(JSON.parse(msg.message));
+    } catch{}
+  });
+}
+</script>
+</body>
+</html>
