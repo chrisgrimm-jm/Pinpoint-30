@@ -316,14 +316,18 @@ if(!topic){
     })
     .catch(()=>{});
 
-  // Live updates via SSE
-  const es = new EventSource('https://ntfy.sh/' + topic + '/sse');
-  es.addEventListener('message', e => {
-    try {
-      const msg = JSON.parse(e.data);
-      if(msg.message) handleState(JSON.parse(msg.message));
-    } catch{}
-  });
+  // Live updates via SSE with auto-reconnect
+  function connectSSE(){
+    const es = new EventSource('https://ntfy.sh/' + topic + '/sse');
+    es.addEventListener('message', e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.message) handleState(JSON.parse(msg.message));
+      } catch{}
+    });
+    es.addEventListener('error', () => { es.close(); setTimeout(connectSSE, 3000); });
+  }
+  connectSSE();
 }
 </script>
 </body>
