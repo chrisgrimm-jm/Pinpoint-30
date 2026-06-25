@@ -452,7 +452,7 @@ function updateStats(){
   const sv = document.getElementById('seasonSel').value;
   const isCareer = sv==='career';
   document.getElementById('statSel').innerHTML = list
-    .filter(s=>!isCareer||s.careerOk)
+    .filter(s=>isCareer?s.careerOk:s.type!=='careerAdvanced')
     .map((s,i)=>`<option value="${list.indexOf(s)}">${s.label}</option>`).join('');
 }
 function onSeasonChange(){
