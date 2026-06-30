@@ -189,10 +189,10 @@ select option,select optgroup{background:#111;}
   <div class="form-row">
     <div class="fg"><label>Season</label>
       <select id="seasonSel" onchange="onSeasonChange()">
-        <option value="career">⭐ All-Time (Career)</option>
+        <option value="career" selected>⭐ All-Time (Career)</option>
         <optgroup label="── Single Season ──────────────">
         <option value="2025">2025</option>
-        <option value="2024" selected>2024</option>
+        <option value="2024">2024</option>
         </optgroup>
         <optgroup label="── 5-Year Windows ─────────────">
         <option value="range:2020-2024">2020–2024</option>
@@ -451,15 +451,30 @@ function updateStats(){
   const list = g==='hitting' ? HITTING_STATS : PITCHING_STATS;
   const sv = document.getElementById('seasonSel').value;
   const isCareer = sv==='career';
-  document.getElementById('statSel').innerHTML = list
-    .filter(s=>isCareer?s.careerOk:s.type!=='careerAdvanced')
-    .map((s,i)=>`<option value="${list.indexOf(s)}">${s.label}</option>`).join('');
+
+  const statSel = document.getElementById('statSel');
+  // Remember currently selected stat (by key) so it survives a season change
+  const prevIdx = statSel.value !== '' ? parseInt(statSel.value) : null;
+  const prevKey = (prevIdx !== null && list[prevIdx]) ? list[prevIdx].key : null;
+
+  const filtered = list.filter(s=>isCareer?s.careerOk:s.type!=='careerAdvanced');
+  statSel.innerHTML = filtered
+    .map((s)=>`<option value="${list.indexOf(s)}">${s.label}</option>`).join('');
+
+  // Try to re-select the same stat by key if it's still in the filtered list
+  if(prevKey !== null){
+    const stillThere = filtered.find(s => s.key === prevKey);
+    if(stillThere){
+      statSel.value = String(list.indexOf(stillThere));
+    }
+  }
 }
 function onSeasonChange(){
   const v = document.getElementById('seasonSel').value;
   document.getElementById('poolFg').style.display = v==='career' ? 'none' : '';
   updateGroupAndStats();
 }
+document.getElementById('poolFg').style.display = document.getElementById('seasonSel').value==='career' ? 'none' : '';
 updateGroupAndStats();
 
 // ── Start ──────────────────────────────────────────────────────────────────────
