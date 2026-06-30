@@ -149,6 +149,21 @@ function isMatch(guess, playerName){
 
 const MLB = 'https://statsapi.mlb.com/api/v1';
 
+// Assigns dense ranks: ties share a rank, next distinct value increments by 1 (not skipped)
+// e.g. raw values [10, 9, 9, 8] -> ranks [1, 2, 2, 3]
+function assignDenseRanks(items, rawKey){
+  let rank = 0;
+  let lastVal = null;
+  return items.map((item) => {
+    const val = item[rawKey];
+    if(lastVal === null || val !== lastVal){
+      rank++;
+      lastVal = val;
+    }
+    return { ...item, rank };
+  });
+}
+
 async function fetchOneSeason(group, statDef, season, pool, position){
   const order = statDef.order||'desc';
   const playerPool = statDef.pool||pool||'ALL';
@@ -197,12 +212,14 @@ async function fetchPlayers(group, statDef, season, pool, position){
     const d = await r.json();
     const splits = d.stats?.[0]?.splits || [];
     if(!splits.length) throw new Error('No data returned. Try a different season or category.');
-    return splits.map((s,i)=>({
-      rank:i+1, name:s.player?.fullName||'?',
+    const mapped = splits.map((s)=>({
+      rawVal: parseFloat(s.stat[statDef.key]),
+      name:s.player?.fullName||'?',
       team:s.team?.name||'',
       value:String(statDef.fmt(s.stat[statDef.key])),
       nameLower:(s.player?.fullName||'').toLowerCase()
     }));
+    return assignDenseRanks(mapped, 'rawVal');
   }
 
   if(years.length === 1){
@@ -218,12 +235,14 @@ async function fetchPlayers(group, statDef, season, pool, position){
     const d = await r.json();
     const splits = d.stats?.[0]?.splits || [];
     if(!splits.length) throw new Error('No data returned. Try a different season or category.');
-    return splits.map((s,i)=>({
-      rank:i+1, name:s.player?.fullName||'?',
+    const mapped = splits.map((s)=>({
+      rawVal: parseFloat(s.stat[statDef.key]),
+      name:s.player?.fullName||'?',
       team:s.team?.name||'',
       value:String(statDef.fmt(s.stat[statDef.key])),
       nameLower:(s.player?.fullName||'').toLowerCase()
     }));
+    return assignDenseRanks(mapped, 'rawVal');
   }
 
   const allSplits = await Promise.all(
@@ -250,11 +269,12 @@ async function fetchPlayers(group, statDef, season, pool, position){
   const sorted = Object.values(totals).sort((a,b) => isAsc ? a.total-b.total : b.total-a.total);
   const top300 = sorted.slice(0, 300);
 
-  return top300.map((p,i)=>({
-    rank:i+1,
+  const mapped = top300.map((p)=>({
+    rawVal: p.total,
     name:p.name,
     team:p.team,
     value:String(statDef.fmt(p.total)),
     nameLower:p.name.toLowerCase()
   }));
+  return assignDenseRanks(mapped, 'rawVal');
 }
