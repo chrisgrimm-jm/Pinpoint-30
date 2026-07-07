@@ -457,7 +457,7 @@ function updateStats(){
   const prevIdx = statSel.value !== '' ? parseInt(statSel.value) : null;
   const prevKey = (prevIdx !== null && list[prevIdx]) ? list[prevIdx].key : null;
 
-  const filtered = list.filter(s=>isCareer?s.careerOk:s.type!=='careerAdvanced');
+  const filtered = list.filter(s=>isCareer?s.careerOk:(s.type!=='careerAdvanced'&&s.type!=='static'));
   statSel.innerHTML = filtered
     .map((s)=>`<option value="${list.indexOf(s)}">${s.label}</option>`).join('');
 
