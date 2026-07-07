@@ -176,18 +176,24 @@ select option,select optgroup{background:#111;}
   <div class="form-row">
     <div class="fg"><label>Player Type</label>
       <select id="groupSel" onchange="updateGroupAndStats()">
-        <option value="hitting">Hitters</option><option value="pitching">Pitchers</option>
+        <optgroup label="Special">
+          <option value="special">⭐ Curated Lists</option>
+        </optgroup>
+        <optgroup label="Standard">
+          <option value="hitting">Hitters</option>
+          <option value="pitching">Pitchers</option>
+        </optgroup>
       </select>
     </div>
-    <div class="fg"><label>Position</label>
+    <div class="fg" id="positionFg"><label>Position</label>
       <select id="positionSel">
         <option value="ALL">All Positions</option>
       </select>
     </div>
     <div class="fg" style="flex:2;min-width:200px"><label>Stat Category</label><select id="statSel"></select></div>
   </div>
-  <div class="form-row">
-    <div class="fg"><label>Season</label>
+  <div class="form-row" id="seasonRow">
+    <div class="fg" id="seasonFg"><label>Season</label>
       <select id="seasonSel" onchange="onSeasonChange()">
         <option value="career" selected>⭐ All-Time (Career)</option>
         <optgroup label="── Single Season ──────────────">
@@ -438,23 +444,43 @@ const PITCHING_POSITIONS = [
   {val:'ALL',label:'All Pitchers'},{val:'SP',label:'Starting Pitcher (SP)'},{val:'RP',label:'Relief Pitcher (RP)'},
 ];
 
+const SPECIAL_STATS = [
+  {key:'BBREF_RBI_ALL_TIME', label:'Hitter RBI — All-Time', type:'static', dataset:'BBREF_RBI_ALL_TIME'},
+];
+
 function updateGroupAndStats(){
   const g = document.getElementById('groupSel').value;
-  const positions = g==='hitting' ? HITTING_POSITIONS : PITCHING_POSITIONS;
-  document.getElementById('positionSel').innerHTML = positions
-    .map(p=>`<option value="${p.val}">${p.label}</option>`).join('');
+
+  if(g === 'special'){
+    // Curated lists: hide position/season/qualifier — not applicable
+    document.getElementById('positionFg').style.display = 'none';
+    document.getElementById('seasonRow').style.display = 'none';
+  } else {
+    document.getElementById('positionFg').style.display = '';
+    document.getElementById('seasonRow').style.display = '';
+    const positions = g==='hitting' ? HITTING_POSITIONS : PITCHING_POSITIONS;
+    document.getElementById('positionSel').innerHTML = positions
+      .map(p=>`<option value="${p.val}">${p.label}</option>`).join('');
+  }
   updateStats();
 }
 
 function updateStats(){
   const g = document.getElementById('groupSel').value;
+  const statSel = document.getElementById('statSel');
+
+  if(g === 'special'){
+    statSel.innerHTML = SPECIAL_STATS
+      .map((s,i)=>`<option value="special:${i}">${s.label}</option>`).join('');
+    return;
+  }
+
   const list = g==='hitting' ? HITTING_STATS : PITCHING_STATS;
   const sv = document.getElementById('seasonSel').value;
   const isCareer = sv==='career';
 
-  const statSel = document.getElementById('statSel');
   // Remember currently selected stat (by key) so it survives a season change
-  const prevIdx = statSel.value !== '' ? parseInt(statSel.value) : null;
+  const prevIdx = statSel.value !== '' && !statSel.value.startsWith('special:') ? parseInt(statSel.value) : null;
   const prevKey = (prevIdx !== null && list[prevIdx]) ? list[prevIdx].key : null;
 
   const filtered = list.filter(s=>isCareer?s.careerOk:(s.type!=='careerAdvanced'&&s.type!=='static'));
@@ -480,10 +506,21 @@ updateGroupAndStats();
 // ── Start ──────────────────────────────────────────────────────────────────────
 async function startGame(){
   const group = document.getElementById('groupSel').value;
-  const list = group==='hitting' ? HITTING_STATS : PITCHING_STATS;
-  const statDef = list[parseInt(document.getElementById('statSel').value)];
-  const season = document.getElementById('seasonSel').value;
-  const pool = document.getElementById('poolSel').value;
+  let statDef, season, pool, position;
+
+  if(group === 'special'){
+    const idx = parseInt(document.getElementById('statSel').value.split(':')[1]);
+    statDef = SPECIAL_STATS[idx];
+    season = 'career';
+    pool = 'ALL';
+    position = 'ALL';
+  } else {
+    const list = group==='hitting' ? HITTING_STATS : PITCHING_STATS;
+    statDef = list[parseInt(document.getElementById('statSel').value)];
+    season = document.getElementById('seasonSel').value;
+    pool = document.getElementById('poolSel').value;
+    position = document.getElementById('positionSel').value;
+  }
   const startId = document.getElementById('startTeamSel').value;
 
   const btn = document.getElementById('startBtn');
@@ -493,8 +530,8 @@ async function startGame(){
   ldmsg.style.display='block'; errEl.style.display='none';
 
   try {
-    const position = document.getElementById('positionSel').value;
-    players = await fetchPlayers(group, statDef, season, pool, position);
+    const fetchGroup = group === 'special' ? 'hitting' : group;
+    players = await fetchPlayers(fetchGroup, statDef, season, pool, position);
     guessCount = 0; turnIdx = 0;
 
     const sorted = TEAMS.filter(t=>selectedTeams.has(t.id));
@@ -509,8 +546,9 @@ async function startGame(){
     turnOrder = ordered.map((t,i)=>({team:t, guessOrder:i, rank:null, player:null, value:null}));
 
     const seasonLabel = season==='career'?'All-Time':season;
+    const groupLabel = group==='special' ? 'Curated List' : (group==='hitting'?'Hitters':'Pitchers');
     document.getElementById('gTitle').textContent = statDef.label;
-    document.getElementById('gMeta').textContent = `${seasonLabel} · ${group==='hitting'?'Hitters':'Pitchers'} · closest to #100 wins`;
+    document.getElementById('gMeta').textContent = `${seasonLabel} · ${groupLabel} · closest to #100 wins`;
 
     buildAnswersGrid();
     buildTurnStrip();
