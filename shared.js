@@ -68,8 +68,6 @@ const HITTING_STATS = [
   {key:'war',                 label:'WAR',                     type:'sabermetrics',careerOk:false, fmt:v=>parseFloat(v).toFixed(1),         order:'desc'},
   {key:'woba',                label:'wOBA',                    type:'sabermetrics',careerOk:false, fmt:v=>parseFloat(v).toFixed(3),         order:'desc', pool:'Qualified'},
   {key:'wRcPlus',             label:'wRC+',                    type:'sabermetrics',careerOk:false, fmt:v=>Math.round(v)+'',                 order:'desc', pool:'Qualified'},
-  // ── Baseball Reference (static imports) ─────────────────────────────────────
-  {key:'rbi',label:'RBI — All-Time (Baseball Ref)',type:'static',dataset:'BBREF_RBI_ALL_TIME',careerOk:true,fmt:v=>+v,order:'desc'},
   // ── All-Time only (careerAdvanced) ────────────────────────────────────────
   {key:'extraBaseHits',               label:'Extra Base Hits',          type:'careerAdvanced',careerOk:true,  fmt:v=>+v,                           order:'desc'},
   {key:'flyOuts',                     label:'Fly Outs',                 type:'careerAdvanced',careerOk:true,  fmt:v=>+v,                           order:'desc'},
