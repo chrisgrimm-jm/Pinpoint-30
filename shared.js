@@ -1160,6 +1160,11 @@ const BBREF_RBI_ALL_TIME = [
   {rank:580,name:'Delmon Young',value:'566',nameLower:'delmon young'},
 ];
 
+// Registry of all static datasets — add new ones here as they're imported
+const STATIC_DATASETS = {
+  BBREF_RBI_ALL_TIME: BBREF_RBI_ALL_TIME,
+};
+
 // Fetch from a static BR dataset instead of the MLB API
 function fetchStaticPlayers(dataset){
   return dataset.map(p => ({...p}));
@@ -1203,9 +1208,8 @@ async function fetchPlayers(group, statDef, season, pool, position){
 
   // Handle static Baseball Reference datasets — ignore season entirely
   if(statDef.type === 'static'){
-    const datasetName = statDef.dataset;
-    const dataset = (typeof window !== 'undefined' ? window : globalThis)[datasetName];
-    if(!dataset) throw new Error('Static dataset not found: ' + datasetName);
+    const dataset = STATIC_DATASETS[statDef.dataset];
+    if(!dataset) throw new Error('Static dataset not found: ' + statDef.dataset);
     return fetchStaticPlayers(dataset);
   }
 
