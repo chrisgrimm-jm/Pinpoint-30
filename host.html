@@ -41,6 +41,8 @@ nav{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px
 select{font-family:'Barlow',sans-serif;font-size:13px;background:#111;color:#fff;border:1px solid #222;padding:9px 10px;border-radius:4px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;}
 select:focus{border-color:#e63946;}
 select option,select optgroup{background:#111;}
+.fg input[type=number]{font-family:'Barlow',sans-serif;font-size:13px;background:#111;color:#fff;border:1px solid #222;padding:9px 10px;border-radius:4px;outline:none;}
+.fg input[type=number]:focus{border-color:#e63946;}
 .team-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .team-hdr span{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#444;}
 .sel-all-btn{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.5px;background:transparent;color:#555;border:1px solid #222;padding:4px 12px;border-radius:3px;cursor:pointer;transition:all 0.15s;}
@@ -171,7 +173,7 @@ select option,select optgroup{background:#111;}
 <!-- SETUP -->
 <div id="setupScreen">
   <div class="sh">Game Setup</div>
-  <div class="ss">1 round · 30 teams · top 15 ranks stay safe · closest to #100 wins</div>
+  <div class="ss">1 round · 30 teams · top 15 ranks stay safe · closest to the line wins</div>
 
   <div class="form-row">
     <div class="fg"><label>Player Type</label>
@@ -259,6 +261,9 @@ select option,select optgroup{background:#111;}
     <div class="fg" id="poolFg"><label>Qualifier</label>
       <select id="poolSel"><option value="ALL">All players</option><option value="Qualified">Qualified only</option></select>
     </div>
+    <div class="fg"><label>Line (Target Rank)</label>
+      <input type="number" id="cutoffInput" min="1" max="300" value="100"/>
+    </div>
   </div>
 
   <div class="team-hdr">
@@ -328,6 +333,7 @@ select option,select optgroup{background:#111;}
 <script>
 const DISPLAY_BASE = 'https://chrisgrimm-jm.github.io/Pinpoint-30/display.html';
 const SAFE_COUNT = 15;
+let CUTOFF = 100;   // the line: rank <= CUTOFF is on the board, closest to it wins
 
 let selectedTeams = new Set();
 let players = [];
@@ -507,6 +513,7 @@ updateGroupAndStats();
 async function startGame(){
   const group = document.getElementById('groupSel').value;
   let statDef, season, pool, position;
+  CUTOFF=Math.min(300,Math.max(1,parseInt(document.getElementById('cutoffInput').value)||100));
 
   if(group === 'special'){
     const idx = parseInt(document.getElementById('statSel').value.split(':')[1]);
@@ -548,7 +555,7 @@ async function startGame(){
     const seasonLabel = season==='career'?'All-Time':season;
     const groupLabel = group==='special' ? 'Curated List' : (group==='hitting'?'Hitters':'Pitchers');
     document.getElementById('gTitle').textContent = statDef.label;
-    document.getElementById('gMeta').textContent = `${seasonLabel} · ${groupLabel} · closest to #100 wins`;
+    document.getElementById('gMeta').textContent = `${seasonLabel} · ${groupLabel} · closest to #${CUTOFF} wins`;
 
     buildAnswersGrid();
     buildTurnStrip();
@@ -620,7 +627,7 @@ function updateAC(val){
   const matches = players.filter(p => norm(p.name).includes(q)).slice(0, 10);
   if(!matches.length){ list.style.display='none'; return; }
   list.innerHTML = matches.map(p => {
-    const over = p.rank > 100 ? `<span class="ac-over">+${p.rank-100} over</span>` : '';
+    const over = p.rank > CUTOFF ? `<span class="ac-over">+${p.rank - CUTOFF} over</span>` : '';
     return `<div class="autocomplete-item" data-name="${p.name}" onmousedown="pickAC('${p.name.replace(/'/g,"\\'")}')">
       <span class="ac-rank">#${p.rank}</span>
       <span>${p.name}</span>
@@ -683,11 +690,11 @@ function submitGuess(){
     entry.value = match.value;
     guessCount++;
     inp.value=''; inp.classList.remove('wrong'); inp.classList.add('correct');
-    if(match.rank <= 100){
+    if(match.rank <= CUTOFF){
       fb.className='feedback ok';
       fb.textContent=`✓ #${match.rank} — ${match.name} (${match.value})`;
     } else {
-      const over = match.rank - 100;
+      const over = match.rank - CUTOFF;
       fb.className='feedback bad';
       fb.textContent=`✗ #${match.rank} — ${match.name} — ${over} over the line`;
       inp.classList.remove('correct'); void inp.offsetWidth; inp.classList.add('wrong');
@@ -748,7 +755,7 @@ function renderStandings(){
   const guessed = turnOrder.filter(e=>e.rank!==null);
   const pending = turnOrder.filter(e=>e.rank===null);
   const sorted = [...guessed].sort((a,b)=>{
-    const ar=a.rank===999?-1:(a.rank>100?0:a.rank), br=b.rank===999?-1:(b.rank>100?0:b.rank);
+    const ar=a.rank===999?-1:(a.rank > CUTOFF?0:a.rank), br=b.rank===999?-1:(b.rank > CUTOFF?0:b.rank);
     if(br!==ar) return br-ar;
     return a.guessOrder-b.guessOrder;
   });
@@ -762,7 +769,7 @@ function renderStandings(){
       <img src="${logoUrl(e.team.id)}" class="sl-logo" width="20" height="20"
         onerror="this.outerHTML='<div style=\\'width:20px;height:20px;border-radius:50%;background:${e.team.color};color:${e.team.alt};display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:7px;\\'>${e.team.abbr}</div>'"/>
       <div style="flex:1;min-width:0"><div class="sl-name">${e.team.abbr}</div><div class="sl-player">${e.player||'—'} · ${e.value||''}</div></div>
-      <span class="sl-rank" style="${e.rank>100&&e.rank<999?'color:#e6394688':''}">${e.rank===999?'N/F':('#'+e.rank)}</span>
+      <span class="sl-rank" style="${e.rank > CUTOFF&&e.rank<999?'color:#e6394688':''}">${e.rank===999?'N/F':('#'+e.rank)}</span>
     </div>`).join('') +
     pending.filter((_,i)=>i+safe.length<SAFE_COUNT).map(e=>`
     <div class="sl-row pending-row">
@@ -781,7 +788,7 @@ function renderStandings(){
       <img src="${logoUrl(e.team.id)}" class="sl-logo" width="20" height="20"
         onerror="this.outerHTML='<div style=\\'width:20px;height:20px;border-radius:50%;background:${e.team.color};color:${e.team.alt};display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:7px;\\'>${e.team.abbr}</div>'"/>
       <div style="flex:1;min-width:0"><div class="sl-name">${e.team.abbr}</div><div class="sl-player">${e.player||'—'} · ${e.value||''}</div></div>
-      <span class="sl-rank" style="${e.rank>100&&e.rank<999?'color:#e6394688':''}">${e.rank===999?'N/F':('#'+e.rank)}</span>
+      <span class="sl-rank" style="${e.rank > CUTOFF&&e.rank<999?'color:#e6394688':''}">${e.rank===999?'N/F':('#'+e.rank)}</span>
     </div>`).join('') +
     pending.filter((_,i)=>i+safe.length>=SAFE_COUNT).map(e=>`
     <div class="sl-row pending-row">
@@ -797,7 +804,7 @@ function renderStandings(){
 // ── Answer key ─────────────────────────────────────────────────────────────────
 function buildAnswersGrid(){
   document.getElementById('answersGrid').innerHTML = players.map(p=>
-    `<div class="ac${p.rank > 100 ? ' over' : ''}" id="ac-${p.rank}">
+    `<div class="ac${p.rank > CUTOFF ? ' over' : ''}" id="ac-${p.rank}">
       <span class="ac-rank">${p.rank}.</span>
       <span class="ac-name">${p.name}</span>
       <span class="ac-val">${p.value}</span>
@@ -816,7 +823,7 @@ function markAnswerFound(rank, team){
 function pushState(){
   const guessed = turnOrder.filter(e=>e.rank!==null);
   const sorted = [...guessed].sort((a,b)=>{
-    const ar=a.rank===999?-1:(a.rank>100?0:a.rank), br=b.rank===999?-1:(b.rank>100?0:b.rank);
+    const ar=a.rank===999?-1:(a.rank > CUTOFF?0:a.rank), br=b.rank===999?-1:(b.rank > CUTOFF?0:b.rank);
     if(br!==ar) return br-ar;
     return a.guessOrder-b.guessOrder;
   });
